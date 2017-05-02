@@ -5,6 +5,7 @@ import hashlib
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin
 from datetime import datetime
+
 article_types = {u'开发语言': ['Python', 'Java', 'JavaScript'],
                  'Linux': [u'Linux成长之路', u'Linux运维实战', 'CentOS', 'Ubuntu'],
                  u'网络技术': [u'思科网络技术', u'其它'],
@@ -99,28 +100,12 @@ class Menu(db.Model):
 
     def __repr__(self):
         return '<Menu %r> ' % self.name
-
-class Article(db.Model):
-    __tablename__ ='articles'
-    id = db.Column(db.Integer,primary_key=True)
-    title = db.Column(db.Integer, unique=True)
-    content = db.Column(db.Text)
-    summary = db.Column(db.Text)
-    create_time = db.Column(db.DateTime, index=True, default=datetime.utcnow())
-    update_time = db.Column(db.DateTime, index=True, default=datetime.utcnow())
-    num_of_view = db.Column(db.Integer, default=0)
-    article_type_id = db.Column(db.Integer, db.ForeignKey('articleTypes.id'))
-
-    def __repr__(self):
-        return '<Article %r>' % self.title
-
-
 class ArticleType(db.Model):
-    __tablename__ = 'articletypes'
+    __tablename__ = 'articleTypes'
     id = db.Column(db.Integer,primary_key=True)
     name = db.Column(db.String(64),unique=True)
     introduction = db.Column(db.Text,default=None)
-    # articles = db.relationship('Article', backref='articleType',lazy= 'dynamic')
+    articles = db.relationship('Article', backref='articleType',lazy= 'dynamic')
     menu_id = db.Column(db.Integer,db.ForeignKey('menus.id'),default=None)
     setting_id = db.Column(db.Integer,db.ForeignKey('articleTypeSettings.id'))
 
@@ -162,6 +147,23 @@ class ArticleType(db.Model):
     def __repr__(self):
         return '<Type> %r' % self.name
 
+class Article(db.Model):
+    __tablename__ ='articles'
+    id = db.Column(db.Integer,primary_key=True)
+    title = db.Column(db.Integer, unique=True)
+    content = db.Column(db.Text)
+    summary = db.Column(db.Text)
+    create_time = db.Column(db.DateTime, index=True, default=datetime.utcnow)
+    update_time = db.Column(db.DateTime, index=True, default=datetime.utcnow)
+    num_of_view = db.Column(db.Integer, default=0)
+    article_type_id = db.Column(db.Integer, db.ForeignKey('articleTypes.id'))
+    source_id = db.Column(db.Integer, db.ForeignKey('sources.id'))
+    # comments = db.relationship('Comment', backref='article', lazy='dynamic')
+    def __repr__(self):
+        return '<Article %r>' % self.title
+
+
+
 class ArticleTypeSetting(db.Model):
     __tablename__ = 'articleTypeSettings'
     id = db.Column(db.Integer,primary_key=True)
@@ -191,24 +193,43 @@ class ArticleTypeSetting(db.Model):
     def __repr__(self):
         return '<ArticleTypeSetting %r>' % self.name
 
-# class Source(db.Model):
-#     __tablename__ ='sources'
-#     id= db.Column(db.Integer,primary_key=True)
-#     name = db.Column(db.String(64),unique=True)
-#     acticles= db.relationship('Article', backref='source',lazy='dynamic')
-#
-#     @staticmethod
-#     def insert_sources():
-#         sources=(u'原创',
-#                  u'转载',
-#                  u'翻译'
-#                  )
-#         for s in sources:
-#             source = Source.query.filter_by(name=s).first()
-#             if source is None:
-#                 source = Source(name=s)
-#             db.session.add(source)
-#         db.session.commit()
-#
-#     def __repr__(self):
-#         return '<Source %r>' % self.name
+class Source(db.Model):
+    __tablename__ ='sources'
+    id= db.Column(db.Integer,primary_key=True)
+    name = db.Column(db.String(64),unique=True)
+    articles= db.relationship('Article', backref='source',lazy='dynamic')
+
+    @staticmethod
+    def insert_sources():
+        sources=(u'原创',
+                 u'转载',
+                 u'翻译'
+                 )
+        for s in sources:
+            source = Source.query.filter_by(name=s).first()
+            if source is None:
+                source = Source(name=s)
+            db.session.add(source)
+        db.session.commit()
+
+    def __repr__(self):
+        return '<Source %r>' % self.name
+
+
+class BlogView(db.Model):
+    __tablename__ = 'blog_view'
+    id = db.Column(db.Integer, primary_key=True)
+    num_of_view = db.Column(db.BigInteger, default=0)
+
+    @staticmethod
+    def insert_view():
+        view = BlogView(num_of_view=0)
+        db.session.add(view)
+        db.session.commit()
+
+    @staticmethod
+    def add_view(db):
+        view = BlogView.query.first()
+        view.num_of_view += 1
+        db.session.add(view)
+        db.session.commit()

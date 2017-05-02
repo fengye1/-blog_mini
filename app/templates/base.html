@@ -110,13 +110,17 @@
                     {% block blog_nav_plugin %}
                                 <div class="entry-box">
                                     <h5><strong>博客统计</strong></h5>
-                                     <p>访问量：<span class="badge">１</span></p>
+                                     <p>访问量：<span class="badge">{{ BlogView.query.first().num_of_view }}</span></p>
                                         <p>
-                                            博文总数：<span class="badge">１</span>
-                                            评论总数：<span class="badge">２</span>
+                                            博文总数：<span class="badge">{{ Article.query.count() }}</span>
+{#                                            评论总数：<span class="badge"></span>#}
                                         </p>
+
                                         <p>
-                                                原创翻译转载
+                                            {% for source in Source.query.all() %}
+                                                <a href="#">{{ source.name }}</a>：
+                                                <span class="badge">{{ source.articles.count() }}</span>
+                                            {% endfor %}
                                         </p>
                                 </div>
                     {% endblock %}
