@@ -107,6 +107,9 @@
                 </div>
 
                 <div class="col-lg-4 blog_nav">
+
+                    {% if 1==0 %}
+
                     {% block blog_nav_plugin %}
                                 <div class="entry-box">
                                     <h5><strong>博客统计</strong></h5>
@@ -118,13 +121,13 @@
 
                                         <p>
                                             {% for source in Source.query.all() %}
-                                                <a href="#">{{ source.name }}</a>：
+                                                <a href="{{ url_for('main.article_sources', id=source.id) }}">{{ source.name }}</a>：
                                                 <span class="badge">{{ source.articles.count() }}</span>
                                             {% endfor %}
                                         </p>
                                 </div>
                     {% endblock %}
-
+    {% endif %}
                 </div>
 
             </div>

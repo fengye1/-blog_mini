@@ -7,12 +7,12 @@
     <div class="base-info">
         <span class="label label-default">{{ moment(article.create_time.date()).format('LL') }}</span>&nbsp;
         <span class="label label-warning">
-            <a href="#" target="_blank" style="color: white">
+            <a href="{{ url_for('main.article_sources',id = article.source.id) }}" target="_blank" style="color: white">
                 {{ article.source.name }}
             </a>
         </span>&nbsp;
         <span class="label label-info">
-            <a href=" #" target="_blank" style="color: white">
+            <a href=" {{ url_for('main.article_type', id=article.articleType.id) }}" target="_blank" style="color: white">
                 {{ article.articleType.name }}
             </a>
         </span>

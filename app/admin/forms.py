@@ -15,6 +15,11 @@ class SubMitArticlesForm(CommonForm):
     content = TextAreaField(u'博文内容',validators=[DataRequired()])
     summary = TextAreaField(u'博文摘要', validators=[DataRequired()])
 
+class ManageArticlesForm(CommonForm):
+    pass
 
+class DeleteArticleForm(FlaskForm):
+    articleId = StringField(validators=[DataRequired()])
 
-
+class DeleteArticlesForm(FlaskForm):
+    articleIds = StringField(validators=[DataRequired()])
