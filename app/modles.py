@@ -95,7 +95,7 @@ class Menu(db.Model):
     @staticmethod
     def return_menus():
         menus = [(m.id, m.name) for m in Menu.query.all()]
-        menus.append(-1,u'不选择导航（该分类单独成一导航）')
+        menus.append((-1,u'不选择导航（该分类单独成一导航'))
         return menus
 
     def __repr__(self):
@@ -158,9 +158,16 @@ class Article(db.Model):
     num_of_view = db.Column(db.Integer, default=0)
     article_type_id = db.Column(db.Integer, db.ForeignKey('articleTypes.id'))
     source_id = db.Column(db.Integer, db.ForeignKey('sources.id'))
-    # comments = db.relationship('Comment', backref='article', lazy='dynamic')
+    comments = db.relationship('Comment', backref='article', lazy='dynamic')
     def __repr__(self):
         return '<Article %r>' % self.title
+
+    @staticmethod
+    def add_view(article,db):
+        article.num_of_view += 1
+        db.session.add(article)
+        db.session.commit()
+
 
 
 
@@ -216,6 +223,8 @@ class Source(db.Model):
         return '<Source %r>' % self.name
 
 
+
+
 class BlogView(db.Model):
     __tablename__ = 'blog_view'
     id = db.Column(db.Integer, primary_key=True)
@@ -233,3 +242,24 @@ class BlogView(db.Model):
         view.num_of_view += 1
         db.session.add(view)
         db.session.commit()
+
+class Comment(db.Model):
+    __tablename__ = 'comments'
+    id = db.Column(db.Integer,primary_key=True)
+    content = db.Column(db.Text)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    author_name = db.Column(db.String(64))
+    author_email = db.Column(db.String(64))
+    avatar_hash= db.Column(db.String(128), default='notReply')
+    article_id = db.Column(db.Integer, db.ForeignKey('articles.id'))
+    disabled = db.Column(db.Boolean, default=False)
+    comment_type = db.Column(db.String(64), default='comment')
+    reply_to = db.Column(db.String(128), default='notReply')
+
+    def __init__(self):
+        super(Comment,self).__init__()
+        if self.author_email is not None and self.avatar_hash is None:
+            self.avatar_hash=hashlib.md5(self.author_email.encode('utf-8')).hexdigest()
+
+
+

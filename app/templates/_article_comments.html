@@ -1,0 +1,15 @@
+<ul class="comments">
+    {% if comments %}
+        {% for comment in comments %}
+            <li class="comment">
+                {% if comment.comment_type =='reply' %}
+                    <p class="comment-reply-info">
+                        <span class="glyphicon glyphicon-envelope"></span>回复给<strong><i>
+                      :
+                    </i></strong>
+                    </p>
+                {% endif %}
+            </li>
+        {% endfor %}
+    {% endif %}
+</ul>

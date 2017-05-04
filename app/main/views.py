@@ -1,7 +1,7 @@
 #coding:utf-8
 from flask import render_template,request,current_app
 from . import main
-from ..modles import Article,BlogView,Source,ArticleType,User
+from ..modles import Article,BlogView,Source,ArticleType,User, Comment
 from .form import CommentForm
 from .. import db
 
@@ -17,23 +17,26 @@ def index():
     return render_template('index.html', articles=articles,
                            pagination=pagination, endpoint='.index')
 
-# @main.route('/article-detials/<int:id>', methods=['GET','POST'])
-# def articleDetails(id):
-#     BlogView.add_view(db)
-#     form = CommentForm(request.form, follow=-1)
-#     article = Article.query.get_or_404(id)
-#     page = request.args.get('page', 1, type=int)
-#     if page == -1:
-#         page = (article.comments.count() - 1) // \
-#                current_app.config['COMMENTS_PER_PAGE'] + 1
-#     pagination = article.comments.order_by(Comment.timestamp.asc()).paginate(
-#         page, per_page=current_app.config['COMMENTS_PER_PAGE'],
-#         error_out=False)
-#     comments = pagination.items
-#     article.add_view(article, db)
-#     return render_template('article_detials.html', User=User, article=article,
-#                            comments=comments, pagination=pagination, page=page,
-#                            form=form, endpoint='.articleDetails', id=article.id)
+@main.route('/article-detials/<int:id>', methods=['GET','POST'])
+def articleDetails(id):
+    BlogView.add_view(db)
+    form = CommentForm(request.form, follow=-1)
+    article = Article.query.get_or_404(id)
+
+    page = request.args.get('page', 1, type=int)
+
+    if page == -1:
+        page = (article.comments.count() - 1) // \
+               current_app.config['COMMENTS_PER_PAGE'] + 1
+    pagination = article.comments.order_by(Comment.timestamp.asc()).paginate(
+        page, per_page=current_app.config['COMMENTS_PER_PAGE'],
+        error_out=False)
+
+    comments = pagination.items
+    Article.add_view(article, db)
+    return render_template('article_detials.html', User=User, article=article,
+                           comments=comments, pagination=pagination, page=page,
+                           form=form, endpoint='.articleDetails', id=article.id)
 
 @main.route('/article-source/<int:id>')
 def article_sources(id):

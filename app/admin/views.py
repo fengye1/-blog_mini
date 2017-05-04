@@ -8,8 +8,9 @@ from flask import request,render_template,flash,redirect,url_for, current_app
 
 from . import admin
 from flask_login import login_required,current_user
-from .forms import SubMitArticlesForm, ManageArticlesForm,DeleteArticlesForm,DeleteArticleForm
-from ..modles import Source,ArticleType,Article
+from .forms import SubMitArticlesForm, ManageArticlesForm,DeleteArticlesForm,DeleteArticleForm,\
+    AddArticleTypeForm
+from ..modles import Source,ArticleType,Article,Menu,ArticleTypeSetting
 from .. import db
 
 
@@ -43,6 +44,37 @@ def submitArticles():
             flash(u'发表博文失败', 'danger')
 
     return render_template('admin/submit_articles.html', form=form)
+
+@admin.route('/edit-articles/<int:id>', methods=['GET', 'POST'])
+def editArticles(id):
+    article = Article.query.get_or_404(id)
+    form =SubMitArticlesForm()
+    sources=[(s.id, s.name) for s in Source.query.all()]
+    form.source.choices= sources
+    types = [(t.id, t.name) for t in ArticleType.query.all()]
+    form.types.choices=types
+
+    if form.validate_on_submit():
+        articleType = ArticleType.query.get_or_404(int(form.types.data))
+        article.articleType = articleType
+        source = Source.query.get_or_404(int(form.source.data))
+        article.source = source
+
+        article.title = form.title.data
+        article.content = form.content.data
+        article.summary = form.summary.data
+        article.update_time = datetime.utcnow()
+        db.session.add(article)
+        db.session.commit()
+        flash(u'博文更新成功！', 'success')
+        return redirect(url_for('main.articleDetails', id=article.id))
+    form.source.data = article.source_id
+    form.title.data = article.title
+    form.content.data = article.content
+    form.types.data = article.article_type_id
+    form.summary.data = article.summary
+    return render_template('admin/submit_articles.html', form=form)
+
 
 
 @admin.route('/manage_articles', methods=['GET','POST'])
@@ -101,10 +133,94 @@ def manage_articles():
     return render_template('admin/manage_articles.html', pagination=pagination,
                            endpoint='admin.manage_articles', form=form,form2=form2,form3=form3, types_id=types_id, source_id=source_id,articles=articles)
 
+@admin.route('/manage_articles/delete-article',methods=['GET','POST'])
+@login_required
+def delete_article():
+    types_id = request.args.get('types_id', -1 , type=int)
+    source_id = request.args.get('source_id', -1,type=int)
+    form = DeleteArticleForm()
 
-@admin.route('/manage_articleTypes')
+    if form.validate_on_submit():
+        articleID= int(form.articleId.data)
+        article = Article.query.get_or_404(articleID)
+        # count = article.comments.count()
+        # for comment in article.comments:
+        #     db.session.delete(comment)
+        db.session.delete(article)
+        try:
+            db.session.commit()
+        except:
+            db.session.rollback()
+            flash(u'删除失败','danger')
+        else:
+            flash(u'成功删除博文和0条评论！' , 'success')
+    if form.errors:
+        flash(u'删除失败', 'danger')
+
+    return  redirect(url_for('admin.manage_articles', types_id=types_id,source_id=source_id,page=request.args.get('page',1,type=int)))
+
+@admin.route('/manage_articles/delete-articles', methods=['GET','POST'])
+@login_required
+def delete_articles():
+    types_id = request.args.get('types_id', -1,type=int)
+    source_id = request.args.get('source_id', -1,type=int)
+    form = DeleteArticlesForm()
+
+    if form.validate_on_submit():
+        articleIds= json.loads(form.articleIds.data)
+        print(articleIds,"abc")
+        count=0
+        for articleId in articleIds:
+            article = Article.query.get_or_404(int(articleId))
+            # count += article.comments.count()
+            # for comment in article.comments:
+            #     db.session.delete(comment)
+            db.session.delete(article)
+            try:
+                db.session.commit()
+            except:
+                db.session.rollback()
+                flash(u'删除失败','danger')
+            else:
+                flash(u'成功删除%s篇博文和%s条评论！' % (len(articleIds), count), 'success')
+        if form.errors:
+            flash(u'删除失败！', 'danger')
+        return redirect(url_for('admin.manage_articles', types_id=types_id, source_id=source_id, page=request.args.get('page',1,type=int)))
+
+
+@admin.route('/manage_articleTypes', methods=['GET', 'POST'])
+@login_required
 def manage_articleTypes():
-    pass
+    # form = AddArticleTypeForm(menus=-1)
+    menus = Menu.return_menus()
+    return_setting_hide = ArticleTypeSetting.return_setting_hide()
+
+    page = request.args.get('page',1,type=int)
+    pagination = ArticleType.query.order_by(ArticleType.id.desc()).paginate(
+        page, per_page=current_app.config['COMMENTS_PER_PAGE'],
+        error_out=False)
+    articleTypes = pagination.items
+    return render_template('admin/manage_articleTypes.html', articleTypes=articleTypes,
+                           pagination=pagination, endpoint='.manage_articleTypes',
+                            page=page)
+
+
+@admin.route('/manage-articleTypes/nav' ,methods=['GET','POST'])
+@login_required
+def manage_articleTypes_nav():
+    # form = AddArticleTypeForm()
+    page = request.args.get('page', 1, type=int)
+    if page == -1:
+        page = (Menu.query.count() - 1) // \
+               current_app.config['COMMENTS_PER_PAGE'] + 1
+    pagination = Menu.query.order_by(Menu.order.asc()).paginate(
+            page, per_page=current_app.config['COMMENTS_PER_PAGE'],
+            error_out=False)
+    menus = pagination.items
+    return render_template('admin/manage_articleTypes_nav.html', menus=menus,
+                           pagination=pagination, endpoint='.manage_articleTypes_nav',
+                           page=page)
+
 
 
 @admin.route('/manage_comments')

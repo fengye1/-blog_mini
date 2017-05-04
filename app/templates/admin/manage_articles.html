@@ -36,7 +36,7 @@
         </div>
     <div class="list-detials">
         <form class="delete-articles" id="delArticlesForm" method="post"
-            action="#">
+            action="{{ url_for('admin.delete_articles', types_id=types_id, source_id=source_id, page=page) }}">
             {{ form3.csrf_token }}
             {{ form3.articleIds(type='hidden', value='') }}
             <form class="solve problem">
@@ -70,11 +70,11 @@
                             </td>
                             <td {{ moment(article.create_time.replace(microsecond=0)).format('LLL') }}></td>
 
-                            <td><a href="#"><span class="glyphicon glyphicon-pencil" title="编辑博文"></span></a></td>
+                            <td><a href="{{ url_for('admin.editArticles',id = article.id) }}"><span class="glyphicon glyphicon-pencil" title="编辑博文"></span></a></td>
 
                             <td>
                                 <form class="delete-article" id="delForm{{ article.id }}" method="post"
-                                >
+                                action="{{ url_for('admin.delete_article', types_id=types_id,source_id=source_id,page=page) }}">
                                     {{ form2.csrf_token }}
                                     {{ form2.articleId(type='hidden',value=article.id) }}
                                     <a class="btn btn-sm btn-default" onclick="delCfm({{ article.id }})" title="删除博文">

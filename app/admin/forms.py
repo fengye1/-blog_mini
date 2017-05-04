@@ -23,3 +23,9 @@ class DeleteArticleForm(FlaskForm):
 
 class DeleteArticlesForm(FlaskForm):
     articleIds = StringField(validators=[DataRequired()])
+
+class AddArticleTypeForm(FlaskForm):
+    name = StringField(u'分类名称',validators=[DataRequired(),Length(1,64)])
+    introduction = TextAreaField(u'分类介绍')
+    setting_hide = SelectField(u'属性',coerce=int,validators=[DataRequired()])
+    menus =SelectField(u'所属导航', coerce=int, validators=[DataRequired()])

@@ -7,3 +7,4 @@ SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(basedir, 'app.db')
 SQLALCHEMY_MIGRATE_REPO = os.path.join(basedir, 'db_repository')
 ARTICLES_PER_PAGE = 10
 SECRET_KEY = 'secret key to protect from csrf'
+COMMENTS_PER_PAGE = 5
