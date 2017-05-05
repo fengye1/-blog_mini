@@ -78,7 +78,7 @@ class Menu(db.Model):
 
     def sort_delete(self):
         for menu in Menu.query.order_by(Menu.order).offset(self.order).all():
-            menu.order -=1
+            menu.order -= 1
             db.session.add(menu)
 
     @staticmethod

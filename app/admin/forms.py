@@ -29,3 +29,13 @@ class AddArticleTypeForm(FlaskForm):
     introduction = TextAreaField(u'分类介绍')
     setting_hide = SelectField(u'属性',coerce=int,validators=[DataRequired()])
     menus =SelectField(u'所属导航', coerce=int, validators=[DataRequired()])
+
+class EditArticleTypeForm(AddArticleTypeForm):
+    articleType_id = StringField(validators=[DataRequired()])
+
+class AddArticleTypeNavForm(FlaskForm):
+    name = StringField(u'导航名称', validators=[DataRequired(), Length(1, 64)])
+
+class EditArticleNavTypeForm(AddArticleTypeNavForm):
+    nav_id = StringField(validators=[DataRequired()])
+
