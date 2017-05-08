@@ -1,7 +1,7 @@
 #coding:utf-8
 from app import app
 from app.modles import BlogInfo, ArticleType, Menu, article_types,ArticleTypeSetting,User,\
-    Source,Article,BlogView
+    Source,Article,BlogView,Plugin
 
 app.jinja_env.globals['BlogInfo'] = BlogInfo
 app.jinja_env.globals['article_types'] = article_types
@@ -10,6 +10,7 @@ app.jinja_env.globals['ArticleType'] = ArticleType
 app.jinja_env.globals['Source'] = Source
 app.jinja_env.globals['Article'] = Article
 app.jinja_env.globals['BlogView']= BlogView
+app.jinja_env.globals['Plugin']=Plugin
 
 
 
@@ -22,6 +23,7 @@ def init_data():
     User.insert_admin(email='blog_mini@163.com', username='blog_mini', password='blog_mini')
     Source.insert_sources()
     BlogView.insert_view()
+    Plugin.insert_system_plugin()
 
 if __name__ == '__main__':
 

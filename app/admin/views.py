@@ -1,25 +1,26 @@
-#coding:utf-8
+# coding:utf-8
 
 
 from datetime import datetime
 import json
-from flask import request,render_template,flash,redirect,url_for, current_app,jsonify
-
+from flask import request, render_template, flash, redirect, url_for, current_app, jsonify
 
 from . import admin
-from flask_login import login_required,current_user
-from .forms import SubMitArticlesForm, ManageArticlesForm,DeleteArticlesForm,DeleteArticleForm,\
-    AddArticleTypeForm, EditArticleTypeForm, EditArticleNavTypeForm, AddArticleTypeNavForm
-from ..modles import Source,ArticleType,Article,Menu,ArticleTypeSetting
+from flask_login import login_required, current_user
+from .forms import SubMitArticlesForm, ManageArticlesForm, DeleteArticlesForm, DeleteArticleForm, \
+    AddArticleTypeForm, EditArticleTypeForm, EditArticleNavTypeForm, AddArticleTypeNavForm, CustomBlogInfoForm, \
+    ChangePasswordForm, EditUserInfoForm, AddBlogPluginForm
+
+from ..modles import Source, ArticleType, Article, Menu, ArticleTypeSetting, BlogInfo, Plugin
 from .. import db
 
 
-@admin.route('/sumbit-articles', methods=['GET','POST'])
+@admin.route('/sumbit-articles', methods=['GET', 'POST'])
 @login_required
 def submitArticles():
     form = SubMitArticlesForm()
     sources = [(s.id, s.name) for s in Source.query.all()]
-    form.source.choices= sources
+    form.source.choices = sources
     types = [(t.id, t.name) for t in ArticleType.query.all()]
     form.types.choices = types
 
@@ -33,7 +34,7 @@ def submitArticles():
         source = Source.query.get(source_id)
         articleType = ArticleType.query.get(type_id)
         if source and ArticleType:
-            article = Article(title=title, content= content, summary=summary,
+            article = Article(title=title, content=content, summary=summary,
                               source=source, articleType=articleType)
             db.session.add(article)
             db.session.commit()
@@ -41,18 +42,19 @@ def submitArticles():
             article_id = Article.query.filter_by(title=title).first().id
             return redirect(url_for('main.index'))
     if form.errors:
-            flash(u'发表博文失败', 'danger')
+        flash(u'发表博文失败', 'danger')
 
     return render_template('admin/submit_articles.html', form=form)
+
 
 @admin.route('/edit-articles/<int:id>', methods=['GET', 'POST'])
 def editArticles(id):
     article = Article.query.get_or_404(id)
-    form =SubMitArticlesForm()
-    sources=[(s.id, s.name) for s in Source.query.all()]
-    form.source.choices= sources
+    form = SubMitArticlesForm()
+    sources = [(s.id, s.name) for s in Source.query.all()]
+    form.source.choices = sources
     types = [(t.id, t.name) for t in ArticleType.query.all()]
-    form.types.choices=types
+    form.types.choices = types
 
     if form.validate_on_submit():
         articleType = ArticleType.query.get_or_404(int(form.types.data))
@@ -76,18 +78,17 @@ def editArticles(id):
     return render_template('admin/submit_articles.html', form=form)
 
 
-
-@admin.route('/manage_articles', methods=['GET','POST'])
+@admin.route('/manage_articles', methods=['GET', 'POST'])
 @login_required
 def manage_articles():
-    types_id = request.args.get('types_id', -1 , type=int)
-    source_id =request.args.get('source_id', -1, type=int)
-    form = ManageArticlesForm(request.form, types=types_id,source=source_id)
-    form2= DeleteArticleForm()
+    types_id = request.args.get('types_id', -1, type=int)
+    source_id = request.args.get('source_id', -1, type=int)
+    form = ManageArticlesForm(request.form, types=types_id, source=source_id)
+    form2 = DeleteArticleForm()
     form3 = DeleteArticlesForm()  # for delete articles
 
-    types=[(t.id,t.name) for t in ArticleType.query.all()]
-    types.append((-1,u'全部分类'))
+    types = [(t.id, t.name) for t in ArticleType.query.all()]
+    types.append((-1, u'全部分类'))
     form.types.choices = types
     sources = [(s.id, s.name) for s in Source.query.all()]
     sources.append((-1, u'全部来源'))
@@ -95,14 +96,14 @@ def manage_articles():
 
     pagination_search = 0
 
-    if form.validate_on_submit() or\
-        (request.args.get('types_id') is not None and request.args.get('source_id') is not None):
+    if form.validate_on_submit() or \
+            (request.args.get('types_id') is not None and request.args.get('source_id') is not None):
         if form.validate_on_submit():
             types_id = form.types.data
             source_id = form.source.data
-            page=1
+            page = 1
         else:
-            types_id=request.args.get('types_id', type=int)
+            types_id = request.args.get('types_id', type=int)
             source_id = request.args.get('source_id', type=int)
             form.types.data = types_id
             form.source.data = source_id
@@ -126,22 +127,24 @@ def manage_articles():
     else:
         page = request.args.get('page', 1, type=int)
         pagination = Article.query.order_by(Article.create_time.desc()).paginate(
-                page, per_page=current_app.config['ARTICLES_PER_PAGE'],
-                error_out=False)
+            page, per_page=current_app.config['ARTICLES_PER_PAGE'],
+            error_out=False)
         articles = pagination.items
 
     return render_template('admin/manage_articles.html', pagination=pagination,
-                           endpoint='admin.manage_articles', form=form,form2=form2,form3=form3, types_id=types_id, source_id=source_id,articles=articles)
+                           endpoint='admin.manage_articles', form=form, form2=form2, form3=form3, types_id=types_id,
+                           source_id=source_id, articles=articles)
 
-@admin.route('/manage_articles/delete-article',methods=['GET','POST'])
+
+@admin.route('/manage_articles/delete-article', methods=['GET', 'POST'])
 @login_required
 def delete_article():
-    types_id = request.args.get('types_id', -1 , type=int)
-    source_id = request.args.get('source_id', -1,type=int)
+    types_id = request.args.get('types_id', -1, type=int)
+    source_id = request.args.get('source_id', -1, type=int)
     form = DeleteArticleForm()
 
     if form.validate_on_submit():
-        articleID= int(form.articleId.data)
+        articleID = int(form.articleId.data)
         article = Article.query.get_or_404(articleID)
         # count = article.comments.count()
         # for comment in article.comments:
@@ -151,25 +154,27 @@ def delete_article():
             db.session.commit()
         except:
             db.session.rollback()
-            flash(u'删除失败','danger')
+            flash(u'删除失败', 'danger')
         else:
-            flash(u'成功删除博文和0条评论！' , 'success')
+            flash(u'成功删除博文和0条评论！', 'success')
     if form.errors:
         flash(u'删除失败', 'danger')
 
-    return  redirect(url_for('admin.manage_articles', types_id=types_id,source_id=source_id,page=request.args.get('page',1,type=int)))
+    return redirect(url_for('admin.manage_articles', types_id=types_id, source_id=source_id,
+                            page=request.args.get('page', 1, type=int)))
 
-@admin.route('/manage_articles/delete-articles', methods=['GET','POST'])
+
+@admin.route('/manage_articles/delete-articles', methods=['GET', 'POST'])
 @login_required
 def delete_articles():
-    types_id = request.args.get('types_id', -1,type=int)
-    source_id = request.args.get('source_id', -1,type=int)
+    types_id = request.args.get('types_id', -1, type=int)
+    source_id = request.args.get('source_id', -1, type=int)
     form = DeleteArticlesForm()
 
     if form.validate_on_submit():
-        articleIds= json.loads(form.articleIds.data)
-        print(articleIds,"abc")
-        count=0
+        articleIds = json.loads(form.articleIds.data)
+        print(articleIds, "abc")
+        count = 0
         for articleId in articleIds:
             article = Article.query.get_or_404(int(articleId))
             # count += article.comments.count()
@@ -180,12 +185,13 @@ def delete_articles():
                 db.session.commit()
             except:
                 db.session.rollback()
-                flash(u'删除失败','danger')
+                flash(u'删除失败', 'danger')
             else:
                 flash(u'成功删除%s篇博文和%s条评论！' % (len(articleIds), count), 'success')
         if form.errors:
             flash(u'删除失败！', 'danger')
-        return redirect(url_for('admin.manage_articles', types_id=types_id, source_id=source_id, page=request.args.get('page',1,type=int)))
+        return redirect(url_for('admin.manage_articles', types_id=types_id, source_id=source_id,
+                                page=request.args.get('page', 1, type=int)))
 
 
 @admin.route('/manage_articleTypes', methods=['GET', 'POST'])
@@ -196,36 +202,36 @@ def manage_articleTypes():
 
     menus = Menu.return_menus()
     return_setting_hide = ArticleTypeSetting.return_setting_hide()
-    form.menus.choices=menus
-    form.setting_hide.choices=return_setting_hide
-    form2.menus.choices =menus
-    form2.setting_hide.choices=return_setting_hide
+    form.menus.choices = menus
+    form.setting_hide.choices = return_setting_hide
+    form2.menus.choices = menus
+    form2.setting_hide.choices = return_setting_hide
 
-    page = request.args.get('page',1,type=int)
+    page = request.args.get('page', 1, type=int)
 
     if form.validate_on_submit():
-        name =form.name.data
+        name = form.name.data
         articleType = ArticleType.query.filter_by(name=name).first()
         if articleType:
             flash(u'添加分类失败！该分类名称已经存在.', 'danger')
 
         else:
             introduction = form.introduction.data
-            setting_hide= form.setting_hide.data
+            setting_hide = form.setting_hide.data
             menu = Menu.query.get(form.menus.data)
             if not menu:
                 menu = None
             articleType = ArticleType(name=name, introduction=introduction, menu=menu,
-                                      setting = ArticleTypeSetting(name=name))
+                                      setting=ArticleTypeSetting(name=name))
 
             if setting_hide == 1:
-                articleType.setting.hide=True
-            if setting_hide ==2:
-                articleType.setting.hide=False
+                articleType.setting.hide = True
+            if setting_hide == 2:
+                articleType.setting.hide = False
 
             db.session.add(articleType)
             db.session.commit()
-            flash(u'添加成功','success')
+            flash(u'添加成功', 'success')
             return redirect(url_for('.manage_articleTypes'))
     if form.errors:
         flash(u'添加分类失败！请查看填写有无错误。', 'danger')
@@ -238,42 +244,41 @@ def manage_articleTypes():
     articleTypes = pagination.items
     return render_template('admin/manage_articleTypes.html', articleTypes=articleTypes,
                            pagination=pagination, endpoint='.manage_articleTypes',
-                            page=page,form=form,form2=form2)
+                           page=page, form=form, form2=form2)
 
 
 # 博文分类
-@admin.route('/manage-articleTypes/nav' ,methods=['GET','POST'])
+@admin.route('/manage-articleTypes/nav', methods=['GET', 'POST'])
 @login_required
 def manage_articleTypes_nav():
     form = AddArticleTypeNavForm()
-    form2= EditArticleNavTypeForm()
+    form2 = EditArticleNavTypeForm()
     page = request.args.get('page', 1, type=int)
 
     if form.validate_on_submit():
         name = form.name.data
         menu = Menu.query.filter_by(name=name).first()
         if menu:
-            page=page
-            flash(u'添加导航失败！该导航名称已经存在。','danger')
+            page = page
+            flash(u'添加导航失败！该导航名称已经存在。', 'danger')
         else:
             menu_count = Menu.query.count()
-            menu = Menu(name=name,order=menu_count+1)
+            menu = Menu(name=name, order=menu_count + 1)
             db.session.add(menu)
             db.session.commit()
-            flash(u'添加导航成功','success')
-        return  redirect(url_for('admin.manage_articleTypes_nav', page=page))
+            flash(u'添加导航成功', 'success')
+        return redirect(url_for('admin.manage_articleTypes_nav', page=page))
     if page == -1:
         page = (Menu.query.count() - 1) // \
                current_app.config['COMMENTS_PER_PAGE'] + 1
     pagination = Menu.query.order_by(Menu.order.asc()).paginate(
-            page, per_page=current_app.config['COMMENTS_PER_PAGE'],
-            error_out=False)
+        page, per_page=current_app.config['COMMENTS_PER_PAGE'],
+        error_out=False)
 
     menus = pagination.items
     return render_template('admin/manage_articleTypes_nav.html', menus=menus,
                            pagination=pagination, endpoint='.manage_articleTypes_nav',
-                           page=page,form=form,form2=form2)
-
+                           page=page, form=form, form2=form2)
 
 
 @admin.route('/manage_comments')
@@ -281,30 +286,134 @@ def manage_comments():
     pass
 
 
-
-@admin.route('/custom_blog_info')
-def custom_blog_info():
-    return render_template('base.html')
-
-
 @admin.route('/custom_blog_plugin')
 def custom_blog_plugin():
-    return render_template('base.html')
+    page = request.args.get('page',1,type=int)
+    pagination = Plugin.query.order_by(Plugin.order.asc()).paginate(
+        page,per_page=current_app.config['COMMENTS_PER_PAGE'],error_out=False
+    )
+    plugins = pagination.items
+    return render_template('admin/custom_blog_plugin.html',Plugin=Plugin, pagination=pagination,
+                           endpoint='.custom_blog_plugin',plugins=plugins,page=page)
+
+@admin.route('/custom/blog-plugin/sort-up/<int:id>')
+@login_required
+def plugin_sort_up(id):
+    page =request.args.get('page',1,type=int)
+    plugin = Plugin.query.get_or_404(id)
+    pre_plugin=Plugin.query.filter_by(order=plugin.order-1).first()
+    if pre_plugin:
+        (plugin.order,pre_plugin.order)=(pre_plugin.order, plugin.order)
+        db.session.add(plugin)
+        db.session.add(pre_plugin)
+        db.session.commit()
+        flash(u'成功将该插件升序！','success')
+    else:
+        flash(u'该插件已位于最前面！','danger')
+    return  redirect(url_for('admin.custom_blog_plugin',page=page))
+
+@admin.route('/custom/blog-plugin/sort-down/<int:id>')
+@login_required
+def plugin_sort_down(id):
+    page = request.args.get('page',1,type=int)
+
+    plugin = Plugin.query.get_or_404(id)
+    latter_plugin=Plugin.query.filter_by(order=plugin.order+1).first()
+    if latter_plugin:
+        (latter_plugin.order,plugin.order)=(plugin.order,latter_plugin.order)
+        db.session.add(plugin)
+        db.session.add(latter_plugin)
+        db.session.commit()
+        flash(u'成功将该插件降序','success')
+    else:
+        flash(u'该插件已经位于最后面','danger')
+    return redirect(url_for('admin.custom_blog_plugin', page=page))
+
+@admin.route('custom/blog-plugin/enable/<int:id>')
+@login_required
+def enable_plugin(id):
+    page = request.args.get('page',1,type=int)
+    plugin = Plugin.query.get_or_404(id)
+    plugin.disabled= not plugin.disabled
+    db.session.add(plugin)
+    db.session.commit()
+    if plugin.disabled==True:
+        flash(u'禁用插件成功')
+    if plugin.disabled==False:
+        flash(u'启用软件成功')
+    return redirect(url_for('admin.custom_blog_plugin', page=page))
+
+@admin.route('/custom/blog-plugin/edit/<int:id>', methods=['GET','POST'])
+@login_required
+def edit_plugin(id):
+    page = request.args.get('page',1,type=int)
+
+    plugin = Plugin.query.get_or_404(id)
+    form = AddBlogPluginForm(title=plugin.title,note=plugin.note,content=plugin.content)
+    if form.validate_on_submit():
+        title = form.title.data
+        plugin_check = Plugin.query.filter_by(title=title).first()
+        if plugin_check and plugin_check.id!=id:
+            flash(u'修改插件失败！该插件名称已经存在。','danger')
+            return redirect(url_for('admin.edit_plugin', id=id))
+        else:
+            plugin.title=title
+            plugin.note = form.note.data
+            plugin.content=form.content.data
+            db.session.add(plugin)
+            db.session.commit()
+            flash(u'修改插件成功！','success')
+        return  redirect(url_for('admin.custom_blog_plugin',page=page))
+    return render_template('admin/blog_plugin_add.html',form=form,page=page)
+
+@admin.route('/custom/blog-plugin/delete/<int:id>')
+@login_required
+def delete_plugin(id):
+    page = request.args.get('page',1, type=int)
+
+    plugin = Plugin.query.get_or_404(id)
+    plugin.sort_delete()
+    db.session.delete(plugin)
+    try:
+        db.session.commit()
+    except:
+        db.session.roolback()
+        flash(u'删除插件失败！','danger')
+    else:
+        flash(u'删除插件成功！','success')
+    return redirect(url_for('admin.custom_blog_plugin', page=page))
 
 
-@admin.route('/add_plugin')
+
+
+
+
+
+
+
+@admin.route('/custom/blog-plugin/add',methods=['GET','POST'])
 def add_plugin():
-    return render_template('base.html')
+    form = AddBlogPluginForm()
+    if form.validate_on_submit():
+        title = form.title.data
+        plugin = Plugin.query.filter_by(title=title).first()
+        if plugin:
+            form = AddBlogPluginForm(title=title, note=form.note.data, content=form.content.data)
+            flash(u'添加插件失败！该插件名称已经存在。', 'danger')
+            return render_template('admin/blog_plugin_add.html', form=form)
+        else:
 
+            note = form.note.data
+            content = form.content.data
+            plugin_count = Plugin.query.count()
+            plugin = Plugin(title=title, note=note,
+                            content=content, order=plugin_count + 1)
+            db.session.add(plugin)
+            db.session.commit()
+            flash(u'添加插件成功', 'success')
+        return redirect(url_for('admin.custom_blog_plugin'))
+    return render_template('admin/blog_plugin_add.html', form=form)
 
-@admin.route('/account')
-def account():
-    return render_template('base.html')
-
-
-@admin.route('/help')
-def help():
-    return render_template('base.html')
 
 @admin.route('/manage-articleTypes/get-articleType-info/<int:id>')
 @login_required
@@ -312,24 +421,25 @@ def get_articleType_info(id):
     if request.is_xhr:
         articletype = ArticleType.query.get_or_404(id)
         if articletype.is_hide:
-            setting_hide =1
+            setting_hide = 1
         else:
-            setting_hide=2
+            setting_hide = 2
         return jsonify({
-            'name':articletype.name,
-            'setting_hide':setting_hide,
+            'name': articletype.name,
+            'setting_hide': setting_hide,
             'introduction': articletype.introduction,
-            'menu':articletype.menu_id or -1
+            'menu': articletype.menu_id or -1
         })
+
 
 @admin.route('/manage-articletypes/edit-articleType', methods=['POST'])
 def edit_articleType():
     form2 = EditArticleTypeForm()
     menus = Menu.return_menus()
-    setting_hide=ArticleTypeSetting.return_setting_hide()
-    form2.menus.choices=menus
+    setting_hide = ArticleTypeSetting.return_setting_hide()
+    form2.menus.choices = menus
     form2.setting_hide.choices = setting_hide
-    page = request.args.get('page',1,type=int)
+    page = request.args.get('page', 1, type=int)
     if form2.validate_on_submit():
         name = form2.name.data
         articleType_id = int(form2.articleType_id.data)
@@ -353,13 +463,13 @@ def edit_articleType():
                 db.session.commit()
                 flash(u'修改系统默认分类成功！', 'success')
         elif ArticleType.query.filter_by(name=form2.name.data).first() \
-            and ArticleType.query.filter_by(name=form2.name.data).first().id != articleType_id:
-                flash(u'修改分类失败！该分类名称已经存在。', 'danger')
+                and ArticleType.query.filter_by(name=form2.name.data).first().id != articleType_id:
+            flash(u'修改分类失败！该分类名称已经存在。', 'danger')
         else:
             introduction = form2.introduction.data
             menu = Menu.query.get(form2.menus.data)
             if not menu:
-               menu = None
+                menu = None
             articleType = ArticleType.query.get_or_404(articleType_id)
             articleType.name = name
             articleType.introduction = introduction
@@ -367,7 +477,7 @@ def edit_articleType():
             if not articleType.setting:
                 articleType.setting = ArticleTypeSetting(name=articleType.name)
             if setting_hide == 1:
-                    articleType.setting.hide = True
+                articleType.setting.hide = True
             if setting_hide == 2:
                 articleType.setting.hide = False
 
@@ -379,20 +489,21 @@ def edit_articleType():
         flash(u'修改分类失败！请查看填写有无错误。', 'danger')
         return redirect(url_for('.manage_articleTypes', page=page))
 
+
 @admin.route('/mange-articleTypes/delete-articleType/<int:id>')
 @login_required
 def delete_articleType(id):
-    page = request.args.get('page',1,type=int)
+    page = request.args.get('page', 1, type=int)
 
     articleType = ArticleType.query.get_or_404(id)
     if articleType.is_protected:
-        flash(u'警告：您没有删除系统默认分类的权限！','danger')
-        return  redirect(url_for('admin.manage_articleTypes',page=page))
-    count=0
+        flash(u'警告：您没有删除系统默认分类的权限！', 'danger')
+        return redirect(url_for('admin.manage_articleTypes', page=page))
+    count = 0
     systemType = ArticleTypeSetting.query.filter_by(protected=True).first().types.first()
     articleTypeSetting = ArticleTypeSetting.query.get(articleType.setting_id)
     for article in articleType.articles.all():
-        count +=1
+        count += 1
         article.articleType_id = systemType.id
         db.session.add(article)
         db.session.commit()
@@ -405,43 +516,44 @@ def delete_articleType(id):
         db.session.roolback()
         flash(u'删除分类失败', 'danger')
     else:
-        flash(r'删除分类成功！同时将原来该分类的%s 篇博文添加到<未分类>。'% count, 'success')
+        flash(r'删除分类成功！同时将原来该分类的%s 篇博文添加到<未分类>。' % count, 'success')
     return redirect(url_for('admin.manage_articleTypes', page=page))
+
 
 @admin.route('/manage-articleTypes/nav/sort-up/<int:id>')
 @login_required
 def nav_sort_up(id):
     page = request.args.get('page', 1, type=int)
-    menu =Menu.query.get_or_404(id)
-    pre_menu = Menu.query.filter_by(order=menu.order-1).first()
+    menu = Menu.query.get_or_404(id)
+    pre_menu = Menu.query.filter_by(order=menu.order - 1).first()
     if pre_menu:
-        (menu.order, pre_menu.order)=(pre_menu.order, menu.order)
+        (menu.order, pre_menu.order) = (pre_menu.order, menu.order)
         db.session.add(menu)
         db.session.add(pre_menu)
         db.session.commit()
-        flash(u'成功将该导航升序！','success')
+        flash(u'成功将该导航升序！', 'success')
     else:
         flash(u'该导航已经位于最前面！', 'danger')
 
     return redirect(url_for('admin.manage_articleTypes_nav', page=page))
 
+
 @admin.route('/manage-articleTypes/nav/sort-down/<int:id>')
 @login_required
 def nav_sort_down(id):
-    page = request.args.get('page',1,type=int)
+    page = request.args.get('page', 1, type=int)
 
     menu = Menu.query.get_or_404(id)
-    latter_menu = Menu.query.filter_by(order=menu.order+1).first()
+    latter_menu = Menu.query.filter_by(order=menu.order + 1).first()
     if latter_menu:
-        (latter_menu.order,menu.order)=(menu.order, latter_menu.order)
+        (latter_menu.order, menu.order) = (menu.order, latter_menu.order)
         db.session.add(menu)
         db.session.add(latter_menu)
         db.session.commit()
         flash(u'成功将导航降序')
     else:
-        flash(u'该导航已经位于最后面','danger')
+        flash(u'该导航已经位于最后面', 'danger')
     return redirect(url_for('admin.manage_articleTypes_nav', page=page))
-
 
 
 @admin.route('/manage-articleTypes/get-articleTypeNav-info/<int:id>')
@@ -450,14 +562,15 @@ def get_articleTypeNav_info(id):
     if request.is_xhr:
         menu = Menu.query.get_or_404(id)
         return jsonify({
-            'name':menu.name,
+            'name': menu.name,
             'nav_id': menu.id,
         })
 
-@admin.route('manage-articleTypes/nav/edit-nav', methods=['GET','POST'])
+
+@admin.route('manage-articleTypes/nav/edit-nav', methods=['GET', 'POST'])
 @login_required
 def edit_nav():
-    form2=EditArticleNavTypeForm()
+    form2 = EditArticleNavTypeForm()
 
     page = request.args.get('page', 1, type=int)
 
@@ -482,12 +595,12 @@ def edit_nav():
 @admin.route('/manage-articletypes/nav/delete-nav/<int:id>')
 @login_required
 def delete_nav(id):
-    page = request.args.get('page',1,type=int)
+    page = request.args.get('page', 1, type=int)
     nav = Menu.query.get_or_404(id)
-    count=0
+    count = 0
     for articleType in nav.types.all():
         count += 1
-        articleType.menu=None
+        articleType.menu = None
         db.session.add(articleType)
     nav.sort_delete()
     db.session.delete(nav)
@@ -497,9 +610,90 @@ def delete_nav(id):
         db.session.rollback()
         flash(u'导航删除失败', 'danger')
     else:
-        flash(u'删除导航成功！同时将原来该导航的%s 的分类的导航设置为无' % count,'success')
+        flash(u'删除导航成功！同时将原来该导航的%s 的分类的导航设置为无' % count, 'success')
     return redirect(url_for('admin.manage_articleTypes_nav', page=page))
 
 
+# 基本信息
+@admin.route('/custom/blog_info', methods=['GET', 'POST'])
+@login_required
+def custom_blog_info():
+    form = CustomBlogInfoForm()
+    navbars = [(1, u'魅力黑'), (2, u'优雅白')]
+    form.navbar.choices = navbars
+    if form.validate_on_submit():
+        blog = BlogInfo.query.first()
+        blog.title = form.title.data
+        blog.signature = form.signature.data
+        if form.navbar.data == 1:
+            blog.navbar = 'inverse'
+        if form.navbar.data == 2:
+            blog.navbar = 'default'
+        db.session.add(blog)
+        db.session.commit()
+        flash(u'修改博客基本信息成功！', 'success')
+        return redirect(url_for('admin.custom_blog_info'))
+    return render_template('admin/custom_blog_info.html', form=form)
 
 
+@admin.route('/custom/blog-info/get')
+@login_required
+def get_blog_info():
+    if request.is_xhr:
+        blog = BlogInfo.query.first()
+        if blog.navbar == 'inverse':
+            navbar = 1
+        if blog.navbar == 'default':
+            navbar = 2
+        return jsonify({
+            'title': blog.title,
+            'signature': blog.signature,
+            'navbar': navbar,
+        })
+
+
+@admin.route('/account/')
+@login_required
+def account():
+    form = ChangePasswordForm()
+    form2 = EditUserInfoForm()
+    return render_template('admin/admin_account.html', form=form, form2=form2)
+
+
+@admin.route('/acount/change-password', methods=['GET', 'POST'])
+@login_required
+def change_password():
+    form = ChangePasswordForm()
+    if form.validate_on_submit():
+        if current_user.verify_password(form.old_password.data):
+            current_user.password = form.password.data
+            db.session.add(current_user)
+            db.session.commit()
+            flash(u'修改密码成功！', 'success')
+            return redirect(url_for('admin.account'))
+        else:
+            flash(u'修改密码失败！密码不正确！', 'danger')
+            return redirect(url_for('admin.account'))
+
+
+@admin.route('/account/edit-user-info', methods=['GET', 'POST'])
+@login_required
+def edit_user_info():
+    form2 = EditUserInfoForm()
+    if form2.validate_on_submit:
+        if current_user.verify_password(form2.password.data):
+            current_user.username = form2.username.data
+            current_user.email = form2.email.data
+            db.session.add(current_user)
+            db.session.commit()
+            flash(u'修改用户信息成功！', 'success')
+            return redirect(url_for('admin.account'))
+        else:
+            flash(u'修改用户信息失败！密码不正确！', 'danger')
+            return redirect(url_for('admin.account'))
+
+
+@admin.route('/help')
+@login_required
+def help():
+    return render_template('admin/help_page.html')

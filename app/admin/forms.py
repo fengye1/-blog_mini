@@ -39,3 +39,22 @@ class AddArticleTypeNavForm(FlaskForm):
 class EditArticleNavTypeForm(AddArticleTypeNavForm):
     nav_id = StringField(validators=[DataRequired()])
 
+class CustomBlogInfoForm(FlaskForm):
+    title = StringField(u'博客标题', validators=[DataRequired()])
+    signature = TextAreaField(u'个性签名', validators=[DataRequired()])
+    navbar = SelectField(u'导航样式',coerce=int, validators=[DataRequired()])
+
+class ChangePasswordForm(FlaskForm):
+    old_password = PasswordField(u'密码', validators=[DataRequired()])
+    password = PasswordField(u'新密码',validators=[DataRequired(),EqualTo('password2', message=u'两次输入的密码不一致')])
+    password2 = PasswordField(u'确认新密码', validators=[DataRequired()])
+
+class EditUserInfoForm(FlaskForm):
+    username= StringField(u'昵称',validators=[DataRequired()])
+    email = StringField(u'电子邮件', validators=[DataRequired(),Length(1,64),Email()])
+    password = PasswordField(u'密码确认', validators=[DataRequired()])
+
+class AddBlogPluginForm(FlaskForm):
+    title = StringField(u'插件名称',validators=[DataRequired()])
+    note =TextAreaField(u'备注')
+    content = TextAreaField(u'内容', validators=[DataRequired()])

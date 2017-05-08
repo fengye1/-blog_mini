@@ -262,4 +262,28 @@ class Comment(db.Model):
             self.avatar_hash=hashlib.md5(self.author_email.encode('utf-8')).hexdigest()
 
 
+class Plugin(db.Model):
+    __tablename__='plugins'
+    id = db.Column(db.Integer,primary_key=True)
+    title = db.Column(db.String(64),unique=True)
+    note = db.Column(db.Text,default='')
+    content=db.Column(db.Text,default='')
+    order=db.Column(db.Integer,default=0)
+    disabled = db.Column(db.Boolean,default=False)
 
+    @staticmethod
+    def insert_system_plugin():
+        plugin = Plugin(title=u'博客统计',
+                        note=u'系统插件',
+                        content='system_plugin',
+                        order=1)
+        db.session.add(plugin)
+        db.session.commit()
+
+    def sort_delete(self):
+        for plugin in Plugin.query.order_by(Plugin.order.asc()).offset(self.order).all():
+            plugin.order -= 1
+            db.session.add(plugin)
+
+    def __repr__(self):
+        return '<Plugin %r>' % self.title
