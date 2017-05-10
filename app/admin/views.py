@@ -11,7 +11,7 @@ from .forms import SubMitArticlesForm, ManageArticlesForm, DeleteArticlesForm, D
     AddArticleTypeForm, EditArticleTypeForm, EditArticleNavTypeForm, AddArticleTypeNavForm, CustomBlogInfoForm, \
     ChangePasswordForm, EditUserInfoForm, AddBlogPluginForm
 
-from ..modles import Source, ArticleType, Article, Menu, ArticleTypeSetting, BlogInfo, Plugin
+from ..modles import Source, ArticleType, Article, Menu, ArticleTypeSetting, BlogInfo, Plugin, Comment
 from .. import db
 
 
@@ -697,3 +697,65 @@ def edit_user_info():
 @login_required
 def help():
     return render_template('admin/help_page.html')
+
+@admin.route('/manage-comments/disable/<int:id>')
+@login_required
+def disable_comment(id):
+    comment = Comment.query.get_or_404(id)
+    comment.disabled = True
+    db.session.add(comment)
+    db.session.commit()
+    flash(u'屏蔽评论成功！', 'success')
+    if request.args.get('disable_type') == 'admin':
+        page = request.args.get('page', 1, type=int)
+        return redirect(url_for('admin.manage_comments',
+                                page=page))
+
+    return redirect(url_for('main.articleDetails',
+                            id=comment.article_id,
+                            page=request.args.get('page', 1, type=int)))
+
+
+
+@admin.route('/manage-comments/enable/<int:id>')
+@login_required
+def enable_comment(id):
+    comment = Comment.query.get_or_404(id)
+    comment.disabled = False
+    db.session.add(comment)
+    db.session.commit()
+    flash(u'恢复显示评论成功！', 'success')
+    if request.args.get('enable_type') == 'admin':
+        page = request.args.get('page', 1, type=int)
+        return redirect(url_for('admin.manage_comments',
+                                page=page))
+
+    return redirect(url_for('main.articleDetails',
+                            id=comment.article_id,
+                            page=request.args.get('page', 1, type=int)))
+
+
+# 单条评论的删除，这里就不使用表单或者Ajax了，这与博文的管理不同，但后面多条评论的删除会使用Ajax
+# 前面在admin页面删除单篇博文时使用表单而不是Ajax，其实使用Ajax效果会更好，当然这里只是尽可能
+# 使用不同的技术，因为以后在做自动化运维开发时总有用得上的地方
+@admin.route('/manage-comments/delete-comment/<int:id>')
+@login_required
+def delete_comment(id):
+    comment = Comment.query.get_or_404(id)
+    article_id = comment.article_id
+    db.session.delete(comment)
+    try:
+        db.session.commit()
+    except:
+        db.session.rollback()
+        flash(u'删除评论失败！', 'danger')
+    else:
+        flash(u'删除评论成功！', 'success')
+    if request.args.get('delete_type') == 'admin':
+        page = request.args.get('page', 1, type=int)
+        return redirect(url_for('admin.manage_comments',
+                                page=page))
+
+    return redirect(url_for('main.articleDetails',
+                            id=article_id,
+                            page=request.args.get('page', 1, type=int)))

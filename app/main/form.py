@@ -6,7 +6,7 @@ from wtforms.validators import DataRequired, Length, Email, Optional
 
 class CommentForm(FlaskForm):
     name = StringField(u'昵称', validators=[DataRequired()])
-    email = StringField(u'邮箱', validators=[DataRequired(), Length(1, 1024), Email])
+    email = StringField(u'邮箱', validators=[DataRequired(), Length(1, 1024), Email()])
 
     content = TextAreaField(u'内容', validators=[DataRequired(), Length(1, 1024)])
     follow = StringField(validators=[DataRequired()])
